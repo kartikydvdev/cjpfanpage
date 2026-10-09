@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OILFLOW | Portfolio</title>
+<link rel="stylesheet" href="assets/css/style.css"></head><body>
+<div id="nav"></div>
+<main class="shell">
+  <div class="pagehead">
+    <div class="crumbs"><a href="index.html">Overview</a> <span>/</span> <span>Portfolio</span></div>
+    <h1>Demo portfolio</h1>
+    <p class="muted small" style="margin:0">Reads the demo stored in this browser. Every figure is hypothetical.</p>
+  </div>
+
+  <div id="body"></div>
+
+  <div class="sectionhead" id="ledger"><div><h2>Demo ledger</h2>
+    <p>Simulated browser events only. Never connected to a payment system.</p></div>
+    <button class="btn quiet" id="reset">Reset demo session</button></div>
+  <div class="card tablewrap">
+    <table><thead><tr><th>DEMO EVENT</th><th>SIMULATED DAY</th><th>AMOUNT · DEMO ₹</th><th>STATUS</th></tr></thead>
+      <tbody id="historyBody"></tbody></table>
+  </div>
+
+  <div class="sectionhead"><div><h2>Simulated withdrawals</h2>
+    <p>Fictional destinations recorded during this demo.</p></div></div>
+  <div class="card tablewrap">
+    <table><thead><tr><th>DEMO DESTINATION</th><th>DAY</th><th>AMOUNT · DEMO ₹</th></tr></thead>
+      <tbody id="withdrawBody"></tbody></table>
+  </div>
+</main>
+<div id="footer"></div>
+<script src="assets/js/app.js"></script>
+<script src="assets/js/charts.js"></script>
+<script>
+OF.mount('portfolio');
+(function () {
+  function render() {
+    var s = OF.load();
+    var host = OF.el('body');
+
+    if (!s.config) {
+      host.innerHTML = '<div class="card pad">' +
+        '<div class="empty" style="padding:10px 0">No demo running in this browser yet. Choose a package and start one — the portfolio fills in as simulated days pass.' +
+        '<div class="actions" style="justify-content:center;margin-bottom:0">' +
+        '<a class="btn primary" href="packages.html">Choose a demo package →</a>' +
+        '<a class="btn quiet" href="deposit.html">Add demo funds →</a></div></div></div>';
+      OF.el('historyBody').innerHTML = '<tr><td colspan="4" class="empty">No demo transactions yet.</td></tr>';
+      OF.el('withdrawBody').innerHTML = '<tr><td colspan="3" class="empty">No simulated withdrawals yet.</td></tr>';
+      return;
+    }
+
+    var c = s.config, x = OF.calc(c), d = s.day;
+    var rewards = OF.round(x.daily * d);
+    var bonus = d === c.duration ? c.bonus : 0;
+    var value = OF.round(c.amount + rewards + bonus);
+    var added = s.added || 0, withdrawn = s.withdrawn || 0;
+
+    host.innerHTML =
+      '<div class="grid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:15px">' +
+      [
+        ['INITIAL SIMULATED AMOUNT', OF.money(c.amount), 'OIL ' + c.name.toUpperCase()],
+        ['ACCUMULATED DEMO REWARDS', OF.money(rewards), 'Across ' + d + ' simulated days'],
+        ['CREDITED SIMULATED BONUS', OF.money(bonus), bonus ? 'Credited once on completion' : 'At completion'],
+        ['CURRENT HYPOTHETICAL VALUE', OF.money(value), 'Including: ' + OF.money(OF.round(value + withdrawn))]
+      ].map(function (r) {
+        return '<div class="card pad"><span class="label">' + r[0] + '</span>' +
+          '<div class="money" style="font-size:28px;font-weight:550;margin:10px 0 3px">' + r[1] + '</div>' +
+          '<span class="tiny">' + r[2] + '</span></div>';
+      }).join('') + '</div>' +
+
+      '<div class="card pad" style="margin-top:18px">' +
+      '<div class="between"><h2>Simulated balance over time</h2>' +
+      '<span class="pill">' + d + ' / ' + c.duration + ' DAYS</span></div>' +
+      '<div class="chartwrap"><svg id="chart" class="chart" viewBox="0 0 960 270" role="img" aria-label="Hypothetical demo balance by day"></svg>' +
+      '<div class="charttip" id="chartTip"></div></div>' +
+      '<div class="between" style="flex-wrap:wrap;margin-top:14px">' +
+      '<div class="small">Simulated P&amp;L: <strong class="' + (rewards + bonus >= 0 ? 'positive' : 'negative') + '">' +
+      OF.signed(rewards + bonus) + ' DEMO</strong></div>' +
+      '<a class="btn" href="package.html?id=' + c.slug + '">Open simulation →</a></div>' +
+      '<p class="tiny">Available demo balance: ' + OF.money(value - withdrawn + added) +
+      ' · Simulated top-ups: ' + OF.money(added) + ' · Simulated withdrawals: ' + OF.money(withdrawn) + ' · All amounts DEMO.</p>' +
+      '</div>' +
+
+      '<div class="sectionhead"><div><h2>Holding</h2><p>The single simulated position in this demo.</p></div></div>' +
+      '<div class="card tablewrap"><table><thead><tr><th>PACKAGE</th><th>STARTING DEMO ₹</th><th>DAILY DEMO ₹</th>' +
+      '<th>DURATION</th><th>DAYS RUN</th><th>CURRENT DEMO ₹</th><th>P&amp;L DEMO ₹</th></tr></thead><tbody>' +
+      '<tr><td><b>OIL ' + c.name.toUpperCase() + '</b><div class="tiny">' + (c.mode === 'fixed' ? 'Fixed demo reward' : 'Market-linked demo') + '</div></td>' +
+      '<td>' + OF.money(c.amount) + '</td><td class="positive">' + OF.money(x.daily) + '</td>' +
+      '<td>' + c.duration + ' days</td><td>' + d + '</td><td><b>' + OF.money(value) + '</b></td>' +
+      '<td class="' + (rewards + bonus >= 0 ? 'positive' : 'negative') + '">' + OF.signed(rewards + bonus) + '</td></tr>' +
+      '</tbody></table></div>' +
+
+      '<div class="card pad" style="margin-top:18px"><div class="between"><h2>Simulated top-ups</h2>' +
+      '<a class="btn quiet" href="deposit.html?id=' + c.slug + '">Add more →</a></div>' +
+      ((s.deposits && s.deposits.length)
+        ? '<div class="tablewrap"><table><thead><tr><th>REFERENCE</th><th>METHOD</th><th>AMOUNT · DEMO ₹</th></tr></thead><tbody>' +
+          s.deposits.map(function (dp) {
+            return '<tr><td>' + OF.esc(dp.ref) + '</td><td>' + OF.esc(dp.method) + '</td>' +
+              '<td class="positive">+' + OF.money(dp.amount) + '</td></tr>';
+          }).join('') + '</tbody></table></div>'
+        : '<p class="tiny" style="margin:0">No simulated top-ups recorded yet.</p>') +
+      '</div>';
+
+    OFCharts.balanceChart(OF.el('chart'), c, d, { tipId: 'chartTip' });
+
+    OF.el('historyBody').innerHTML = (s.events && s.events.length)
+      ? s.events.slice().reverse().map(function (e) {
+          return '<tr><td>' + OF.esc(e.name) + '<div class="tiny">SIMULATED</div></td><td>Day ' + e.day + '</td>' +
+            '<td class="' + (e.amount < 0 ? 'negative' : 'positive') + '">' + OF.signed(e.amount) + ' DEMO</td>' +
+            '<td><span class="pill">COMPLETED</span></td></tr>';
+        }).join('')
+      : '<tr><td colspan="4" class="empty">No demo transactions yet.</td></tr>';
+
+    var wd = (s.events || []).filter(function (e) { return e.name.indexOf('withdrawal to') > -1; });
+    OF.el('withdrawBody').innerHTML = wd.length
+      ? wd.slice().reverse().map(function (e) {
+          return '<tr><td>' + OF.esc(e.name.replace('Demo withdrawal to ', '')) + '</td><td>Day ' + e.day + '</td>' +
+            '<td class="negative">' + OF.signed(e.amount) + ' DEMO</td></tr>';
+        }).join('')
+      : '<tr><td colspan="3" class="empty">No simulated withdrawals yet. Open a package simulation to record one.</td></tr>';
+  }
+
+  OF.el('reset').onclick = function () {
+    if (!OF.load().config) { OF.toast('The demo session is already empty.'); return; }
+    if (window.confirm('Reset the fictional demo session and clear its ledger? No real funds are involved.')) {
+      OF.clear(); OF.toast('Demo session cleared.'); render(); OF.mount('portfolio');
+    }
+  };
+
+  render();
+})();
+</script></body></html>
