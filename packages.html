@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OILFLOW | Demo packages</title>
+<link rel="stylesheet" href="assets/css/style.css"></head><body>
+<div id="nav"></div>
+<main class="shell">
+  <div class="pagehead">
+    <div class="crumbs"><a href="index.html">Overview</a> <span>/</span> <span>Packages</span></div>
+    <h1>Demo packages</h1>
+    <p class="muted small" style="margin:0">Six starting amounts with a preset 14-day illustrative reward schedule. Preset values are hypothetical and intentionally exaggerated to demonstrate the interface.</p>
+  </div>
+
+  <div class="sectionhead">
+    <div><h2 style="margin-top:5px">Choose a starting amount</h2>
+      <p>Opening a package takes you to its own simulation page.</p></div>
+    <span class="badge">HYPOTHETICAL DEMO SCENARIO</span>
+  </div>
+  <div class="packages" id="grid"></div>
+
+  <div class="sectionhead"><div><h2>Compare demo packages</h2>
+    <p>Preset values only. All monetary columns are hypothetical DEMO amounts.</p></div>
+    <div class="tools">
+      <input class="filter" id="search" aria-label="Filter packages by name" placeholder="Filter packages...">
+      <select class="filter" id="sort" aria-label="Sort packages">
+        <option value="amount">Starting value: low to high</option>
+        <option value="amount-desc">Starting value: high to low</option>
+        <option value="daily-desc">Daily reward: high to low</option>
+        <option value="final-desc">Final value: high to low</option>
+        <option value="name">Package: A to Z</option>
+      </select>
+    </div>
+  </div>
+  <div class="card tablewrap">
+    <table><thead><tr>
+      <th>PACKAGE</th><th>STARTING DEMO ₹</th><th>DAILY DEMO ₹</th><th>DURATION</th>
+      <th>TOTAL REWARD DEMO ₹</th><th>BONUS DEMO ₹</th><th>FINAL EX-BONUS DEMO ₹</th><th></th>
+    </tr></thead><tbody id="compareBody"></tbody></table>
+  </div>
+  <p class="tiny">Final value = starting amount + scheduled rewards. Package bonuses are separate and credited once on completion.</p>
+</main>
+<div id="footer"></div>
+<script src="assets/js/app.js"></script>
+<script>
+OF.mount('packages');
+(function () {
+  var state = { filter: '', sort: 'amount' };
+
+  function card(p) {
+    var x = OF.calc(OF.defaultConfig(p));
+    return '<article class="card package" style="--accent:' + p.color + '">' +
+      '<div class="between"><span class="tier">' + String(p.id + 1).padStart(2, '0') + ' / ' + p.name.toUpperCase() + '</span>' +
+      '<span class="sessiontag">DEMO READY</span></div>' +
+      '<div class="amount money">' + OF.money(p.amount) + ' <span class="label" style="display:inline">DEMO</span></div>' +
+      '<div class="tiny">HYPOTHETICAL DEMO SCENARIO</div>' +
+      '<div class="metrics">' +
+        '<div><span class="label">DAILY DEMO REWARD</span><b class="positive money">' + OF.money(p.daily) + '<span class="tiny"> / day</span></b></div>' +
+        '<div><span class="label">SIMULATION DURATION</span><b>' + p.duration + ' days</b></div>' +
+        '<div><span class="label">TOTAL SIMULATED REWARD</span><b class="money">' + OF.money(x.rewards) + '</b></div>' +
+        '<div><span class="label">SEPARATE DEMO BONUS</span><b class="money">' + OF.money(p.bonus) + '</b></div>' +
+      '</div>' +
+      '<div class="between finish"><span class="label">FINAL DEMO VALUE<br>BEFORE SEPARATE BONUS</span><b class="money">' + OF.money(x.final) + '</b></div>' +
+      '<div class="actions" style="margin:0">' +
+        '<a class="btn primary wide" href="deposit.html?id=' + p.slug + '">SIMULATE →</a>' +
+        '<a class="btn quiet" href="package.html?id=' + p.slug + '">Details</a>' +
+      '</div></article>';
+  }
+
+  OF.el('grid').innerHTML = OF.tiers.map(card).join('');
+
+  function renderTable() {
+    var q = state.filter.toLowerCase().trim(), sort = state.sort;
+    var rows = OF.tiers.filter(function (p) {
+      return ('oil ' + p.name).toLowerCase().indexOf(q) > -1;
+    });
+    rows.sort(function (a, b) {
+      if (sort === 'name') return a.name.localeCompare(b.name);
+      if (sort === 'amount-desc') return b.amount - a.amount;
+      if (sort === 'daily-desc') return b.daily - a.daily;
+      if (sort === 'final-desc') return (b.amount + b.daily * 14) - (a.amount + a.daily * 14);
+      return a.amount - b.amount;
+    });
+    OF.el('compareBody').innerHTML = rows.map(function (p) {
+      return '<tr><td>OIL ' + p.name.toUpperCase() + '</td>' +
+        '<td>' + OF.money(p.amount) + '</td>' +
+        '<td class="positive">' + OF.money(p.daily) + '</td>' +
+        '<td>' + p.duration + ' days</td>' +
+        '<td>' + OF.money(p.daily * 14) + '</td>' +
+        '<td>' + OF.money(p.bonus) + '</td>' +
+        '<td>' + OF.money(p.amount + p.daily * 14) + '</td>' +
+        '<td><a class="btn quiet" href="deposit.html?id=' + p.slug + '">SIMULATE</a></td></tr>';
+    }).join('') || '<tr><td colspan="8" class="empty">No demo packages match this filter.</td></tr>';
+  }
+
+  OF.el('search').oninput = function (e) { state.filter = e.target.value; renderTable(); };
+  OF.el('sort').onchange = function (e) { state.sort = e.target.value; renderTable(); };
+  renderTable();
+})();
+</script></body></html>
